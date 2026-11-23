@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyMate — Student Planner</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#1d2433;--muted:#697386;--primary:#5267e8;--line:#e7eaf2;--green:#179b72;--orange:#f59e0b}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(120deg,#5267e8,#7d66e8);color:white;padding:28px 20px 34px}
+.wrap{max-width:1050px;margin:auto}header .top{display:flex;justify-content:space-between;align-items:center;gap:12px}h1{margin:0;font-size:clamp(25px,4vw,36px)}header p{margin:8px 0 0;opacity:.9}
+.date{font-size:14px;background:#ffffff22;padding:9px 12px;border-radius:12px}
+main{max-width:1050px;margin:-18px auto 40px;padding:0 16px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 6px 24px #26345b08}
+.card h2{font-size:18px;margin:0 0 15px}.stats{grid-column:span 12;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.stat{padding:17px;border-radius:15px;background:#f8f9ff}.stat span{font-size:13px;color:var(--muted)}.stat strong{display:block;font-size:27px;margin-top:6px}
+.tasks{grid-column:span 7}.timer{grid-column:span 5}.exam{grid-column:span 5}.progress-card{grid-column:span 7}
+form{display:flex;gap:8px;flex-wrap:wrap}input,select,button{font:inherit;border-radius:10px;border:1px solid var(--line);padding:10px 12px;background:white;color:var(--text)}
+input[type="text"]{flex:1;min-width:130px}button{background:var(--primary);color:white;border:0;font-weight:600;cursor:pointer}button.secondary{background:#eef0ff;color:var(--primary)}button.danger{background:#fff0f0;color:#c43d3d}
+.task-list{list-style:none;padding:0;margin:14px 0 0}.task{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.task:last-child{border-bottom:0}.task label{flex:1;overflow-wrap:anywhere}.task.done label{text-decoration:line-through;color:var(--muted)}.task small{color:var(--muted)}.task .remove{padding:5px 9px;font-size:13px}
+.timer-display{text-align:center;font-size:48px;font-weight:750;letter-spacing:1px;margin:14px 0}.timer-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.timer-note{text-align:center;color:var(--muted);font-size:13px;margin-top:12px}
+.exam form{display:grid;grid-template-columns:1fr;gap:10px}.exam input{width:100%}.countdown{font-size:28px;font-weight:750;margin:15px 0 5px}.muted{color:var(--muted);font-size:13px}
+.bar{height:12px;background:#edf0f7;border-radius:99px;overflow:hidden;margin:10px 0}.bar div{height:100%;width:0;background:var(--green);transition:width .2s}.progress-number{font-size:32px;font-weight:750}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+@media(max-width:720px){.tasks,.timer,.exam,.progress-card{grid-column:span 12}.stats{gap:8px}.stat{padding:13px}.stat strong{font-size:22px}.card{padding:16px}header .top{align-items:flex-start;flex-direction:column}.date{align-self:flex-start}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <div><h1>StudyMate</h1><p>Your simple daily study planner</p></div>
+    <div class="date" id="todayLabel"></div>
+  </div>
+</header>
+<main>
+<div class="grid">
+  <section class="stats">
+    <div class="stat"><span>Today's tasks</span><strong id="taskStat">0 / 0</strong></div>
+    <div class="stat"><span>Study sessions</span><strong id="sessionStat">0</strong></div>
+    <div class="stat"><span>Focus time today</span><strong id="focusStat">0 min</strong></div>
+  </section>
+
+  <section class="card tasks">
+    <h2>Today's study tasks</h2>
+    <form id="taskForm">
+      <input id="taskInput" type="text" placeholder="e.g. Economics — International Trade" maxlength="100" required>
+      <select id="subjectInput" aria-label="Subject">
+        <option>Other</option><option>Accounts</option><option>Law</option><option>Economics</option><option>Quantitative Aptitude</option><option>Biology</option><option>Physics</option><option>Chemistry</option>
+      </select>
+      <button type="submit">Add task</button>
+    </form>
+    <ul class="task-list" id="taskList"></ul>
+    <p class="muted" id="emptyTasks">No tasks yet. Add your first task above.</p>
+  </section>
+
+  <section class="card timer">
+    <h2>Focus timer</h2>
+    <div class="muted">Choose a focus session</div>
+    <div class="timer-display" id="timerDisplay">25:00</div>
+    <div class="timer-actions">
+      <button id="startBtn">Start</button>
+      <button class="secondary" id="pauseBtn">Pause</button>
+      <button class="secondary" id="resetBtn">Reset</button>
+    </div>
+    <div class="timer-actions" style="margin-top:12px">
+      <button class="secondary" data-min="25">25 min</button>
+      <button class="secondary" data-min="50">50 min</button>
+    </div>
+    <p class="timer-note">A completed focus session is added to your daily total.</p>
+  </section>
+
+  <section class="card exam">
+    <h2>Exam countdown</h2>
+    <form id="examForm">
+      <input id="examName" type="text" placeholder="Exam name (e.g. CA Foundation)" maxlength="70">
+      <input id="examDate" type="date">
+      <button type="submit">Save exam</button>
+    </form>
+    <div class="countdown" id="examCountdown">No exam set</div>
+    <div class="muted" id="examCaption">Add your exam date to count down.</div>
+  </section>
+
+  <section class="card progress-card">
+    <h2>Today's progress</h2>
+    <div class="progress-number" id="progressPercent">0%</div>
+    <div class="bar"><div id="progressBar"></div></div>
+    <p class="muted" id="progressText">Complete your tasks to build your study streak.</p>
+    <button class="secondary" id="clearBtn">Clear today's tasks</button>
+  </section>
+</div>
+</main>
+<footer>StudyMate saves your tasks in this browser on this device. No account required.</footer>
+<script>
+const $ = id => document.getElementById(id);
+const dayKey = new Date().toLocaleDateString('en-CA');
+const storageKey = 'studymate-data-v1';
+let data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+if (data.day !== dayKey) data = {day:dayKey,tasks:[],sessions:0,focusMinutes:0,examName:data.examName||'',examDate:data.examDate||''};
+data.tasks ||= []; data.sessions ||= 0; data.focusMinutes ||= 0;
+function save(){localStorage.setItem(storageKey,JSON.stringify(data));}
+$('todayLabel').textContent = new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric',year:'numeric'});
+
+function render(){
+  const list=$('taskList');list.innerHTML='';
+  data.tasks.forEach((task,index)=>{
+    const li=document.createElement('li');li.className='task'+(task.done?' done':'');
+    const check=document.createElement('input');check.type='checkbox';check.checked=task.done;check.setAttribute('aria-label','Mark task complete');
+    check.addEventListener('change',()=>{task.done=check.checked;save();render();});
+    const label=document.createElement('label');label.textContent=task.title;
+    const small=document.createElement('small');small.textContent=task.subject;
+    const remove=document.createElement('button');remove.className='remove danger';remove.textContent='×';remove.title='Remove task';
+    remove.addEventListener('click',()=>{data.tasks.splice(index,1);save();render();});
+    li.append(check,label,small,remove);list.append(li);
+  });
+  $('emptyTasks').style.display=data.tasks.length?'none':'block';
+  const done=data.tasks.filter(t=>t.done).length;
+  $('taskStat').textContent=`${done} / ${data.tasks.length}`;
+  $('sessionStat').textContent=data.sessions;
+  $('focusStat').textContent=`${data.focusMinutes} min`;
+  const percent=data.tasks.length?Math.round(done/data.tasks.length*100):0;
+  $('progressPercent').textContent=percent+'%';$('progressBar').style.width=percent+'%';
+  $('progressText').textContent=data.tasks.length?`${done} of ${data.tasks.length} tasks completed.`:'Add a task to start tracking progress.';
+  $('examName').value=data.examName||'';$('examDate').value=data.examDate||'';
+  updateExam();
+}
+$('taskForm').addEventListener('submit',e=>{
+  e.preventDefault();const title=$('taskInput').value.trim();if(!title)return;
+  data.tasks.push({title,subject:$('subjectInput').value,done:false});$('taskInput').value='';save();render();
+});
+$('clearBtn').addEventListener('click',()=>{
+  if(confirm("Remove all of today's tasks?")){data.tasks=[];save();render();}
+});
+$('examForm').addEventListener('submit',e=>{
+  e.preventDefault();data.examName=$('examName').value.trim();data.examDate=$('examDate').value;save();updateExam();
+});
+function updateExam(){
+  if(!data.examDate){$('examCountdown').textContent='No exam set';$('examCaption').textContent='Add your exam date to count down.';return;}
+  const target=new Date(data.examDate+'T00:00:00');const today=new Date();today.setHours(0,0,0,0);
+  const days=Math.ceil((target-today)/86400000);
+  $('examCountdown').textContent=days>0?`${days} days left`:days===0?'Exam day!':'Exam date passed';
+  $('examCaption').textContent=data.examName||'Your exam';
+}
+let duration=25*60,remaining=duration,interval=null;
+function showTimer(){const m=Math.floor(remaining/60),s=remaining%60;$('timerDisplay').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+$('startBtn').addEventListener('click',()=>{if(interval)return;interval=setInterval(()=>{remaining--;showTimer();if(remaining<=0){clearInterval(interval);interval=null;data.sessions++;data.focusMinutes+=Math.round(duration/60);save();render();alert('Focus session complete! Take a short break.');}},1000);});
+$('pauseBtn').addEventListener('click',()=>{clearInterval(interval);interval=null;});
+$('resetBtn').addEventListener('click',()=>{clearInterval(interval);interval=null;remaining=duration;showTimer();});
+document.querySelectorAll('[data-min]').forEach(btn=>btn.addEventListener('click',()=>{clearInterval(interval);interval=null;duration=Number(btn.dataset.min)*60;remaining=duration;showTimer();}));
+render();showTimer();
+</script>
+</body>
+</html>
